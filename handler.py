@@ -1,3 +1,4 @@
+import asyncio
 import requests
 import time
 import os
@@ -14,7 +15,54 @@ MG = "MG"
 RC = "Resources_Center"
 
 
-def get_data():
+async def get_course_data(url,email, headers, info_list):
+    info = {
+        "email": email
+    }
+    SAIC_completed = 0
+    SAIC_total = 0
+    MG_completed = 0
+    MG_total = 0
+    RC_completed = 0
+    RC_total = 0
+    try:
+        courses_request = requests.get(url, headers=headers)
+        if courses_request.status_code != 200:
+            # log
+            pass
+        else:
+            courses_list = courses_request.json()
+            for course in courses_list:
+                if course['Name'].startswith(SAIC):
+                    SAIC_total += 1
+                    if course['Complete']:
+                        SAIC_completed += 1
+                elif course['Name'].startswith(MG):
+                    MG_total += 1
+                    if course['Complete']:
+                        MG_completed += 1
+                elif course['Name'].startswith(RC):
+                    RC_total += 1
+                    if course['Complete']:
+                        RC_completed += 1
+                else:
+                    pass
+        info[SAIC + '_completed'] = SAIC_completed
+        info[SAIC + '_total'] = SAIC_total
+
+        info[MG + '_completed'] = MG_completed
+        info[MG + '_total'] = MG_total
+
+        info[RC + '_completed'] = RC_completed
+        info[RC + '_total'] = RC_total
+
+        info_list.append(info)
+    except Exception as e:
+        # log
+        pass
+
+
+async def get_data():
     user_url = BASE_URL + "/users" + SUFFIX
     user_courses_url = BASE_URL + "/users/{user_id}/courses" + SUFFIX
     header = {
@@ -40,54 +88,15 @@ def get_data():
         except Exception as e:
             # log
             break
-        for user_data in users_response:
-            courses_url = user_courses_url.format(user_id=user_data['Id'])
-            info = {
-                "email": user_data['Email']
-            }
-            SAIC_completed = 0
-            SAIC_total = 0
-            MG_completed = 0
-            MG_total = 0
-            RC_completed = 0
-            RC_total = 0
-            try:
-                courses_request = requests.get(courses_url, headers=header)
-                if courses_request.status_code != 200:
-                    # log
-                    continue
-                else:
-                    courses_list = courses_request.json()
-                    for course in courses_list:
-                        if course['Name'].startswith(SAIC):
-                            SAIC_total += 1
-                            if course['Complete']:
-                                SAIC_completed += 1
-                        elif course['Name'].startswith(MG):
-                            MG_total += 1
-                            if course['Complete']:
-                                MG_completed += 1
-                        elif course['Name'].startswith(RC):
-                            RC_total += 1
-                            if course['Complete']:
-                                RC_completed += 1
-                        else:
-                            pass
-                if SAIC_total > 0:
-                    info[SAIC+'_completed'] = SAIC_completed
-                    info[SAIC+'_total'] = SAIC_total
-                if MG_total > 0:
-                    info[MG+'_completed'] = MG_completed
-                    info[MG+'_total'] = MG_total
-                if RC_total > 0:
-                    info[RC+'_completed'] = RC_completed
-                    info[RC+'_total'] = RC_total
 
-                info_list.append(info)
-            except Exception as e:
-                # log
-                continue
-
+        tasks = [asyncio.create_task(get_course_data(
+            user_courses_url.format(user_id=user_data['Id']),
+            user_data['Email'],
+            headers=header,
+            info_list=info_list
+        )) for user_data in users_response]
+        for task in tasks:
+            await task
         result = {'info_list': info_list}
         finished = True
 
@@ -95,5 +104,5 @@ def get_data():
 
 
 star_time = time.time()
-get_data()
+asyncio.run(get_data())
 print(time.time() - star_time)
