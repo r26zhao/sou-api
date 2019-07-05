@@ -3,11 +3,13 @@ import requests
 import time
 import os
 
-from local_settings import API_KEY
-
+from local_settings import *
 
 BASE_URL = "https://api.litmos.com/v1.svc"
 SUFFIX = "?source=MY-APP&format=json"
+
+saleforce_oauth2 = "https://test.salesforce.com/services/oauth2/token"
+saleforce_post_api = "https://saicservice--smiluat.cs74.my.salesforce.com/services/apexrest/SyncCourse"
 
 # category
 SAIC = "SAIC_Motor"
@@ -15,7 +17,7 @@ MG = "MG"
 RC = "Resources_Center"
 
 
-async def get_course_data(url,email, headers, info_list):
+async def get_course_data(url, email, headers, info_list):
     info = {
         "email": email
     }
@@ -103,6 +105,29 @@ async def get_data():
     return result
 
 
-star_time = time.time()
-asyncio.run(get_data())
-print(time.time() - star_time)
+def send_data(data):
+    token_query = "{token_url}?grant_type={grant_type}&client_id={client_id}&" \
+                  "client_secret={client_secret}&username={username}&password={password}".format(
+        token_url=saleforce_oauth2,
+        grant_type=grant_type,
+        client_id=client_id,
+        client_secret=client_secret,
+        username=username,
+        password=password
+    )
+
+    token_request = requests.post(token_query)
+    token_response = token_request.json()
+    access_token = token_response['access_token']
+
+    post_header = {
+        "access_token": access_token,
+        "Content-Type": "application/json"
+    }
+
+    post_request = requests.post(saleforce_post_api, data=data, headers=post_header)
+    print(post_request.status_code)
+
+
+data = asyncio.run(get_data())
+send_data(data)
