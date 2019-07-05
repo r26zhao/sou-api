@@ -8,9 +8,6 @@ from local_settings import *
 BASE_URL = "https://api.litmos.com/v1.svc"
 SUFFIX = "?source=MY-APP&format=json"
 
-saleforce_oauth2 = "https://test.salesforce.com/services/oauth2/token"
-saleforce_post_api = "https://saicservice--smiluat.cs74.my.salesforce.com/services/apexrest/SyncCourse"
-
 # category
 SAIC = "SAIC_Motor"
 MG = "MG"
@@ -99,7 +96,7 @@ async def get_data():
         )) for user_data in users_response]
         for task in tasks:
             await task
-        result = {'info_list': info_list}
+        result = {'infoList': info_list}
         finished = True
 
     return result
@@ -108,7 +105,7 @@ async def get_data():
 def send_data(data):
     token_query = "{token_url}?grant_type={grant_type}&client_id={client_id}&" \
                   "client_secret={client_secret}&username={username}&password={password}".format(
-        token_url=saleforce_oauth2,
+        token_url=token_endpoint,
         grant_type=grant_type,
         client_id=client_id,
         client_secret=client_secret,
@@ -121,13 +118,18 @@ def send_data(data):
     access_token = token_response['access_token']
 
     post_header = {
-        "access_token": access_token,
+        "Authorization": "Bearer {}".format(access_token),
         "Content-Type": "application/json"
     }
 
-    post_request = requests.post(saleforce_post_api, data=data, headers=post_header)
+    post_request = requests.post(post_endpoint, json=data, headers=post_header)
     print(post_request.status_code)
 
 
-data = asyncio.run(get_data())
-send_data(data)
+if __name__ == '__main__':
+    print("start to fetch data from LMS ...")
+    data = asyncio.run(get_data())
+    print("start to send data to CRM ...")
+    send_data(data)
+    print("Done")
+
