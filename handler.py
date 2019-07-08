@@ -103,17 +103,14 @@ async def get_data():
 
 
 def send_data(data):
-    token_query = "{token_url}?grant_type={grant_type}&client_id={client_id}&" \
-                  "client_secret={client_secret}&username={username}&password={password}".format(
-        token_url=token_endpoint,
-        grant_type=grant_type,
-        client_id=client_id,
-        client_secret=client_secret,
-        username=username,
-        password=password
-    )
-
-    token_request = requests.post(token_query)
+    params = {
+        "grant_type": "password",
+        "client_id": client_id,  # Consumer Key
+        "client_secret": client_secret,  # Consumer Secret
+        "username": username,  # The email you use to login
+        "password": password  # Concat your password and your security token
+    }
+    token_request = requests.post(token_endpoint, params=params)
     token_response = token_request.json()
     access_token = token_response['access_token']
 
