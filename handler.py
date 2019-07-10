@@ -60,10 +60,11 @@ async def get_course_data(url, email, headers, info_list):
     except Exception as e:
         # log
         pass
+    time.sleep(0.6)
 
 
 async def get_data():
-    user_url = BASE_URL + "/users" + SUFFIX + "&start={}&limit=50"
+    user_url = BASE_URL + "/users" + SUFFIX + "&start={}&limit=100"
     user_courses_url = BASE_URL + "/users/{user_id}/courses" + SUFFIX
     header = {
         "apikey": API_KEY,
@@ -83,7 +84,7 @@ async def get_data():
                     break
                 else:
                     users_retry += 1
-                    # log
+                    print("retry to fetch user list ..")
                     continue
             users_response = users_request.json()
         except Exception as e:
@@ -95,12 +96,12 @@ async def get_data():
             user_data['UserName'],
             headers=header,
             info_list=info_list
-        )) for user_data in users_response]
+        )) for user_data in users_response if user_data['Brand'] == "CRM"]
         for task in tasks:
             await task
 
-        if len(users_response) == 50:
-            offset += 50
+        if len(users_response) == 100:
+            offset += 100
             finished = False
         else:
             finished = True
@@ -135,5 +136,5 @@ if __name__ == '__main__':
     data = asyncio.run(get_data())
     print("cost: {}".format(time.time() - start))
     print("start to send data to CRM ...")
-    #send_data(data)
+    send_data(data)
     print("Done")
